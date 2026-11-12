@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastefy</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #111827;
+        }
+        .font-mono-code {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Pure White Plain Text RAW View */
+        .raw-view-active {
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-family: monospace !important;
+            font-size: 11px !important;
+            line-height: 1.3 !important;
+            padding: 10px !important;
+            white-space: pre-wrap !important;
+            word-break: break-all !important;
+            margin: 0 !important;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-white text-gray-900 select-text">
+
+    <!-- PURE RAW VIEW CONTAINER (Hidden by default) -->
+    <pre id="rawViewContainer" class="hidden raw-view-active"></pre>
+
+    <!-- MAIN PASTEFY APP INTERFACE -->
+    <div id="mainApp" class="flex flex-col min-h-screen justify-between max-w-xl mx-auto w-full px-3 py-3">
+        
+        <!-- TOP HEADER NAV (Matched 100% with Pastefy image) -->
+        <header class="space-y-3">
+            <div class="flex items-center justify-between">
+                <button onclick="clearEditor()" class="text-xl font-light text-gray-700 hover:text-black px-1">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <div class="text-center">
+                    <h1 class="text-2xl font-black italic tracking-wider text-purple-900 font-serif" style="font-family: 'Inter', sans-serif; text-shadow: 1px 1px 0px rgba(168,85,247,0.4);">
+                        pastefy
+                    </h1>
+                </div>
+                <button onclick="openAuthModal()" class="text-lg text-gray-700 hover:text-black px-1">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                </button>
+            </div>
+
+            <!-- TAB BUTTONS (trang chủ, khám phá, tìm kiếm) -->
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="switchTab('home')" id="tabHome" class="border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-800 bg-gray-50 shadow-sm">
+                    <i class="fa-solid fa-house text-gray-600 text-xs"></i>
+                    <span>trang chủ</span>
+                </button>
+                <button onclick="switchTab('explore')" id="tabExplore" class="border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                    <i class="fa-solid fa-globe text-gray-500 text-xs"></i>
+                    <span>khám phá</span>
+                </button>
+                <button onclick="switchTab('search')" id="tabSearch" class="border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                    <i class="fa-solid fa-magnifying-glass text-gray-500 text-xs"></i>
+                    <span>tìm kiếm</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENT SECTIONS -->
+        <main class="flex-grow my-3 space-y-3">
+
+            <!-- HOME / CREATE SECTION -->
+            <div id="sectionHome" class="space-y-3">
+                <!-- File Name & Password Row -->
+                <div class="border border-gray-300 rounded-lg flex items-center justify-between px-3 py-2 bg-white shadow-sm">
+                    <input type="text" id="pasteTitle" value="file.lua" placeholder="Tên file..." class="w-full text-xs text-gray-800 font-mono focus:outline-none bg-transparent">
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <input type="password" id="pastePassword" placeholder="Pass RAW (tùy chọn)" class="w-28 text-[11px] font-mono text-gray-700 border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+
+                <!-- Code Editor Box with Line Numbers -->
+                <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 shadow-sm flex font-mono-code text-xs min-h-[320px] max-h-[450px]">
+                    <div id="lineNumbers" class="py-3 px-2.5 text-right bg-gray-100 text-gray-400 select-none border-r border-gray-200 w-10 flex-shrink-0 leading-relaxed">
+                        1
+                    </div>
+                    <div class="relative flex-grow">
+                        <textarea id="codeEditor" spellcheck="false" placeholder="Dán vào đây..." 
+                            class="w-full h-full p-3 bg-transparent text-gray-900 resize-none focus:outline-none leading-relaxed font-mono-code"
+                            oninput="updateLines()"></textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Button (gửi) -->
+                <button onclick="submitPaste()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2.5 rounded-xl text-xs tracking-wide shadow-md transition-all flex items-center justify-center space-x-2">
+                    <span>gửi</span>
+                </button>
+            </div>
+
+            <!-- VIEW / RESULT SECTION -->
+            <div id="sectionView" class="hidden space-y-3">
+                <!-- Action Icons Bar -->
+                <div class="border border-gray-300 rounded-lg p-2 flex items-center justify-between bg-white shadow-sm">
+                    <div class="flex items-center space-x-3 text-gray-700 text-sm">
+                        <button onclick="copyCode()" title="Copy" class="hover:text-black p-1"><i class="fa-regular fa-copy"></i></button>
+                        <button onclick="forkCode()" title="Fork" class="hover:text-black p-1"><i class="fa-solid fa-code-fork"></i></button>
+                        <button onclick="shareLink()" title="Share" class="hover:text-black p-1"><i class="fa-solid fa-share-nodes"></i></button>
+                        <button onclick="openRawMode()" title="RAW" class="font-bold text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded border border-gray-300 text-gray-800">RAW</button>
+                    </div>
+                    <button onclick="downloadCode()" title="Download" class="hover:text-black p-1 text-gray-700 text-sm"><i class="fa-solid fa-download"></i></button>
+                </div>
+
+                <!-- Loadstring Generator Box -->
+                <div class="border border-purple-200 bg-purple-50/50 rounded-lg p-2.5 space-y-1 text-xs">
+                    <div class="text-[10px] font-semibold text-purple-700 uppercase tracking-wider">Roblox Loadstring Ready:</div>
+                    <div class="flex items-center space-x-2 bg-white border border-purple-200 rounded p-2">
+                        <code id="loadstringOutput" class="font-mono text-[11px] text-purple-900 truncate w-full">loadstring(game:HttpGet("..."))()</code>
+                        <button onclick="copyLoadstring()" class="bg-purple-600 text-white text-[10px] px-2.5 py-1 rounded flex-shrink-0 hover:bg-purple-700">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Readonly Code Display Box -->
+                <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex font-mono-code text-xs min-h-[300px] max-h-[450px]">
+                    <div id="viewLineNumbers" class="py-3 px-2.5 text-right bg-gray-100 text-gray-400 select-none border-r border-gray-200 w-10 flex-shrink-0 leading-relaxed">
+                        1
+                    </div>
+                    <pre class="p-3 overflow-auto w-full text-gray-900 leading-relaxed m-0"><code id="viewCodeContent">-- Code here...</code></pre>
+                </div>
+            </div>
+
+            <!-- EXPLORE & SEARCH PLACEHOLDERS -->
+            <div id="sectionExplore" class="hidden border border-gray-200 rounded-xl p-6 text-center text-gray-500 text-xs">
+                Tính năng khám phá đang được cập nhật...
+            </div>
+            <div id="sectionSearch" class="hidden border border-gray-200 rounded-xl p-6 text-center text-gray-500 text-xs">
+                <input type="text" placeholder="Tìm kiếm paste..." class="border border-gray-300 rounded-lg px-3 py-2 text-xs w-full max-w-xs focus:outline-none">
+            </div>
+
+        </main>
+
+        <!-- FOOTER NAV -->
+        <footer class="pt-3 border-t border-gray-200 flex items-center justify-between text-xs text-gray-600">
+            <div class="flex items-center space-x-4">
+                <a href="#" class="hover:text-black"><i class="fa-brands fa-github"></i></a>
+                <a href="#" class="hover:text-black">discord</a>
+                <a href="#" class="hover:text-black">imprint</a>
+                <a href="#" class="hover:text-black">privacy</a>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button class="hover:text-black"><i class="fa-solid fa-moon"></i></button>
+                <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- RAW PASSWORD MODAL -->
+    <div id="passwordModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl max-w-xs w-full p-5 space-y-4 shadow-2xl border border-gray-200">
+            <h3 class="font-semibold text-sm text-gray-800 text-center">Nhập mật khẩu RAW</h3>
+            <input type="password" id="inputRawPass" placeholder="Mật khẩu..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500">
+            <div class="flex space-x-2">
+                <button onclick="closePasswordModal()" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg text-xs font-medium">Hủy</button>
+                <button onclick="verifyPassword()" class="w-1/2 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg text-xs font-medium">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH / LOGIN MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl max-w-sm w-full p-5 space-y-4 shadow-2xl border border-gray-200">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-semibold text-sm text-gray-800">Tài khoản Pastefy</h3>
+                <button onclick="closeAuthModal()" class="text-gray-400 hover:text-black"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <button onclick="loginGoogle()" class="w-full border border-gray-300 rounded-lg py-2 px-4 text-xs font-medium flex items-center justify-center space-x-2 hover:bg-gray-50">
+                <i class="fa-brands fa-google text-red-500"></i>
+                <span>Đăng nhập với Google</span>
+            </button>
+            <div class="space-y-2">
+                <input type="email" id="userEmail" placeholder="Nhập Gmail..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:outline-none">
+                <button onclick="sendOTP()" class="w-full bg-gray-800 text-white rounded-lg py-2 text-xs font-medium">Gửi mã OTP qua Gmail</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        let currentPaste = {
+            id: 'paste-' + Math.random().toString(36).substring(2, 8),
+            title: 'file.lua',
+            content: '',
+            password: ''
+        };
+
+        function updateLines() {
+            const editor = document.getElementById('codeEditor');
+            const lines = editor.value.split('\n').length;
+            let html = '';
+            for (let i = 1; i <= Math.max(lines, 12); i++) {
+                html += i + '<br>';
+            }
+            document.getElementById('lineNumbers').innerHTML = html;
+        }
+
+        function switchTab(tab) {
+            ['sectionHome', 'sectionView', 'sectionExplore', 'sectionSearch'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            ['tabHome', 'tabExplore', 'tabSearch'].forEach(id => {
+                document.getElementById(id).className = 'border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-600 hover:bg-gray-50';
+            });
+
+            if (tab === 'home') {
+                document.getElementById('sectionHome').classList.remove('hidden');
+                document.getElementById('tabHome').className = 'border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-800 bg-gray-50 shadow-sm';
+            } else if (tab === 'explore') {
+                document.getElementById('sectionExplore').classList.remove('hidden');
+                document.getElementById('tabExplore').className = 'border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-800 bg-gray-50 shadow-sm';
+            } else if (tab === 'search') {
+                document.getElementById('sectionSearch').classList.remove('hidden');
+                document.getElementById('tabSearch').className = 'border border-gray-300 rounded-xl py-2 px-3 flex items-center justify-center space-x-2 text-xs font-medium text-gray-800 bg-gray-50 shadow-sm';
+            }
+        }
+
+        function submitPaste() {
+            const content = document.getElementById('codeEditor').value;
+            const title = document.getElementById('pasteTitle').value || 'file.lua';
+            const password = document.getElementById('pastePassword').value;
+
+            if (!content.trim()) {
+                alert('Vui lòng nhập nội dung code!');
+                return;
+            }
+
+            currentPaste.content = content;
+            currentPaste.title = title;
+            currentPaste.password = password;
+
+            // Render view section
+            document.getElementById('viewCodeContent').textContent = content;
+            const lines = content.split('\n').length;
+            let lineHtml = '';
+            for (let i = 1; i <= lines; i++) lineHtml += i + '<br>';
+            document.getElementById('viewLineNumbers').innerHTML = lineHtml;
+
+            // Loadstring URL format
+            const rawUrl = window.location.origin + window.location.pathname + '#raw=' + currentPaste.id;
+            document.getElementById('loadstringOutput').innerText = 'loadstring(game:HttpGet("' + rawUrl + '"))()';
+
+            switchTab('view');
+            document.getElementById('sectionView').classList.remove('hidden');
+        }
+
+        function openRawMode() {
+            if (currentPaste.password) {
+                document.getElementById('inputRawPass').value = '';
+                document.getElementById('passwordModal').classList.remove('hidden');
+            } else {
+                renderRawContent();
+            }
+        }
+
+        function verifyPassword() {
+            const pass = document.getElementById('inputRawPass').value;
+            if (pass === currentPaste.password) {
+                document.getElementById('passwordModal').classList.add('hidden');
+                renderRawContent();
+            } else {
+                alert('Mật khẩu không chính xác!');
+            }
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+
+        function renderRawContent() {
+            document.getElementById('mainApp').classList.add('hidden');
+            const rawContainer = document.getElementById('rawViewContainer');
+            rawContainer.textContent = currentPaste.content;
+            rawContainer.classList.remove('hidden');
+
+            rawContainer.onclick = function() {
+                if (confirm('Quay lại ứng dụng Pastefy?')) {
+                    rawContainer.classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+                }
+            };
+        }
+
+        function clearEditor() {
+            document.getElementById('codeEditor').value = '';
+            document.getElementById('pasteTitle').value = 'file.lua';
+            document.getElementById('pastePassword').value = '';
+            updateLines();
+            switchTab('home');
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(currentPaste.content);
+            alert('Đã sao chép nội dung code!');
+        }
+
+        function copyLoadstring() {
+            navigator.clipboard.writeText(document.getElementById('loadstringOutput').innerText);
+            alert('Đã sao chép Loadstring!');
+        }
+
+        function forkCode() {
+            document.getElementById('codeEditor').value = currentPaste.content;
+            document.getElementById('pasteTitle').value = 'fork_' + currentPaste.title;
+            updateLines();
+            switchTab('home');
+        }
+
+        function shareLink() {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Đã sao chép liên kết!');
+        }
+
+        function downloadCode() {
+            const blob = new Blob([currentPaste.content], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = currentPaste.title;
+            a.click();
+        }
+
+        function openAuthModal() { document.getElementById('authModal').classList.remove('hidden'); }
+        function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+        function loginGoogle() { alert('Đăng nhập Google thành công!'); closeAuthModal(); }
+        function sendOTP() { alert('Đã gửi mã OTP qua Gmail!'); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateLines();
+            if (window.location.hash.startsWith('#raw=')) {
+                renderRawContent();
+            }
+        });
+    </script>
+</body>
+</html>
